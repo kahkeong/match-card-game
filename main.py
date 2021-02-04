@@ -33,6 +33,7 @@ pygame.init()
 # colors
 BUTTON_COLOR = 153, 255, 200
 WHITE_COLOR = 255, 255, 255
+BLUE_COLOR = 0, 0, 255
 BACKGROUND_COLOR = 255, 153, 51
 TOP_BAR_BACKGROUND_COLOR = 102, 102, 153
 
@@ -59,8 +60,9 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 screen_rect = screen.get_rect()
 
 # other constants
-NUMBER_OF_CARDS = 6
+NUMBER_OF_CARDS = ROW * COLUMN // 2
 FPS = 30
+MILLISECOND_TO_SHOW_EACH_CARD = 300
 clock = pygame.time.Clock()
 # fruits image location
 fruits = listdir("fruits")
@@ -75,6 +77,9 @@ for fruit in fruits:
 game_state = GameState.MAIN_MENU
 cards = create_cards()
 round_number = 0
+show_card = True
+previous_time = None
+showing_card_number = 0
 
 
 create_cards()
@@ -103,6 +108,27 @@ while True:
         screen.blit(quit_text, quit_text_pos.topleft)
 
     elif game_state == GameState.IN_PROGRESS:
+        # flip open the cards so user can have a glimpse at each of them.
+        if show_card:
+            if previous_time is None:
+                # we start flipping the cards from this time
+                previous_time = pygame.time.get_ticks()
+            current_time = pygame.time.get_ticks()
+            if current_time >= previous_time + MILLISECOND_TO_SHOW_EACH_CARD:
+                # close the previous card
+                if showing_card_number >= 1:
+                    cards[showing_card_number - 1].is_selected = False
+
+                # open current card
+                if showing_card_number < NUMBER_OF_CARDS * 2:
+                    cards[showing_card_number].is_selected = True
+                    previous_time = current_time
+                showing_card_number += 1
+
+            if showing_card_number > NUMBER_OF_CARDS * 2:
+                # finished showing all the cards
+                show_card = False
+
         round_number_text = font.render(f"Round: {round_number}", True, (10, 10, 10))
         round_number_text_pos = round_number_text.get_rect()
         option_text_pos = option_text.get_rect(left=WIDTH * 3 // 4)
@@ -116,8 +142,11 @@ while True:
         screen.blit(option_text, option_text_pos)
 
         for card in cards:
-            screen.fill(WHITE_COLOR, card.rect)
-            screen.blit(fruit_images[card.name], card.rect)
+            if card.is_selected or card.is_matched:
+                screen.fill(WHITE_COLOR, card.rect)
+                screen.blit(fruit_images[card.name], card.rect)
+            else:
+                screen.fill(BLUE_COLOR, card.rect)
 
     elif game_state == GameState.PAUSED:
         resume_text_pos = resume_text.get_rect()
@@ -142,19 +171,30 @@ while True:
         screen.blit(main_menu_text, main_menu_text_pos.topleft)
 
     elif game_state == GameState.END:
+        round_number_text = font.render(
+            f"Took {round_number} rounds to finish !", True, (10, 10, 10)
+        )
+        round_number_text_pos = round_number_text.get_rect()
+        round_number_text_pos.center = screen_rect.center
+
         restart_text_pos = restart_text.get_rect()
-        restart_text_pos.center = tuple(map(sum, zip((0, 50), resume_text_pos.center)))
+        restart_text_pos.center = tuple(
+            map(sum, zip((0, 50), round_number_text_pos.center))
+        )
 
         main_menu_text_pos = main_menu_text.get_rect()
         main_menu_text_pos.center = tuple(
             map(sum, zip((0, 50), restart_text_pos.center))
         )
 
+        screen.fill(BACKGROUND_COLOR)
+        screen.blit(round_number_text, round_number_text_pos.topleft)
+
         screen.fill(BUTTON_COLOR, restart_text_pos)
-        screen.blit(main_menu_text, main_menu_text_pos.topleft)
+        screen.blit(restart_text, restart_text_pos.topleft)
 
         screen.fill(BUTTON_COLOR, main_menu_text_pos)
-        screen.blit(quit_text, main_menu_text_pos.topleft)
+        screen.blit(main_menu_text, main_menu_text_pos.topleft)
 
     # logic code start here
     if game_state == GameState.MAIN_MENU:
@@ -171,13 +211,43 @@ while True:
                     sys.exit()
 
     elif game_state == GameState.IN_PROGRESS:
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                pos = pygame.mouse.get_pos()
+        # if the UI is still showing the cards, dun react to clicking events
+        if not show_card:
+            events = pygame.event.get()
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    pos = pygame.mouse.get_pos()
 
-                if option_text_pos.collidepoint(pos):
-                    game_state = GameState.PAUSED
+                    if option_text_pos.collidepoint(pos):
+                        game_state = GameState.PAUSED
+
+                    for card in cards:
+                        if card.rect.collidepoint(pos) and not card.is_matched:
+                            card.is_selected = True
+
+            # check whether two opened cards are match while ignoring matched card
+            opened_card_count = 0
+            opened_cards = []
+            for card in cards:
+                if card.is_selected:
+                    opened_card_count += 1
+                    opened_cards.append(card)
+
+            if opened_card_count == 2:
+                card1, card2 = opened_cards
+                if card1.name == card2.name:
+                    card1.is_matched = True
+                    card2.is_matched = True
+                card1.is_selected = False
+                card2.is_selected = False
+                round_number += 1
+
+            # check are all cards matched
+            for card in cards:
+                if not card.is_matched:
+                    break
+            else:
+                game_state = GameState.END
 
     elif game_state == GameState.PAUSED:
         events = pygame.event.get()
@@ -190,13 +260,33 @@ while True:
                 elif restart_text_pos.collidepoint(pos):
                     cards = create_cards()
                     round_number = 0
+                    show_card = True
                     game_state = GameState.IN_PROGRESS
+                    showing_card_number = 0
                 elif main_menu_text_pos.collidepoint(pos):
                     cards = create_cards()
                     round_number = 0
+                    show_card = True
                     game_state = GameState.MAIN_MENU
+                    showing_card_number = 0
 
     elif game_state == GameState.END:
-        pass
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                pos = pygame.mouse.get_pos()
+
+                if restart_text_pos.collidepoint(pos):
+                    cards = create_cards()
+                    round_number = 0
+                    show_card = True
+                    game_state = GameState.IN_PROGRESS
+                    showing_card_number = 0
+                elif main_menu_text_pos.collidepoint(pos):
+                    cards = create_cards()
+                    round_number = 0
+                    show_card = True
+                    game_state = GameState.MAIN_MENU
+                    showing_card_number = 0
 
     pygame.display.flip()
