@@ -4,6 +4,9 @@ from enum_game_state import GameState
 import sys
 import random
 import pygame
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 def create_cards():
@@ -29,7 +32,56 @@ def create_cards():
     return new_cards
 
 
+class GridSizeError(Exception):
+    pass
+
+
+def read_input():
+    argList = sys.argv
+    row = DEFAULT_ROW_SIZE
+    column = DEFAULT_COLUMN_SIZE
+    input_row = None
+    input_column = None
+    valid = False
+
+    if len(argList) == 1:
+        pass
+    else:
+        logging.info("Note that the minimum grid size is limited to 2x3")
+        try:
+            input_row = int(argList[1])
+            input_column = int(argList[2])
+            fruits = listdir("fruits")
+            size = len(fruits)
+            # print(size)
+            # maximum cards available are <= size*2
+            if input_row < 2 or input_column < 3 or input_row * input_column > size * 2:
+                raise GridSizeError()
+            row = input_row
+            column = input_column
+            valid = True
+        except ValueError:
+            logging.info("Invalid arguments, arguments should be type number")
+            logging.info("Fall back to default values")
+        except IndexError:
+            logging.info("Please provide two arguments")
+            logging.info("Fall back to default values")
+        except GridSizeError:
+            logging.info(
+                f"Invalid arguments, Row value must be >=2 and Column value must be >= 3 and Row x Column should not exceed {size*2}"
+            )
+
+    if valid:
+        logging.info(f"Board are initialized to requested grid size of {row}x{column}")
+    else:
+        logging.info(
+            f"For best experience, board are initialized to default grid size of {row}x{column}"
+        )
+    return row, column
+
+
 pygame.init()
+pygame.display.set_caption("Match card game")
 # colors
 BUTTON_COLOR = 153, 255, 200
 WHITE_COLOR = 255, 255, 255
@@ -41,15 +93,17 @@ TOP_BAR_BACKGROUND_COLOR = 102, 102, 153
 TOP_BAR_GAP = 30
 CARD_SIZE = 90
 CARD_BORDER_GAP = 10
-ROW = 3
-COLUMN = 4
+DEFAULT_ROW_SIZE = 3
+DEFAULT_COLUMN_SIZE = 4
+ROW, COLUMN = read_input()
 # 4 X 3 map
 WIDTH = CARD_SIZE * COLUMN + CARD_BORDER_GAP * (COLUMN + 1)
 HEIGHT = TOP_BAR_GAP + CARD_SIZE * ROW + CARD_BORDER_GAP * (ROW + 1)
 
+
 # UI stuff
 font = pygame.font.Font(None, 36)
-memory_game_text = font.render("Memory Game", True, (10, 10, 10))
+match_card_game_text = font.render("Match Card Game", True, (10, 10, 10))
 start_text = font.render("Start", True, (10, 10, 10))
 quit_text = font.render("Quit", True, (10, 10, 10))
 option_text = font.render("Option", True, (10, 10, 10))
@@ -86,20 +140,27 @@ create_cards()
 # game loop
 while True:
     clock.tick(FPS)
+    events = pygame.event.get()
+    for event in events:
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
     # update screen code start here
     if game_state == GameState.MAIN_MENU:
         screen.fill(BACKGROUND_COLOR)
-        memory_game_pos = memory_game_text.get_rect()
-        memory_game_pos.center = screen_rect.center
+        match_card_game_pos = match_card_game_text.get_rect()
+        match_card_game_pos.center = screen_rect.center
 
         start_text_pos = start_text.get_rect()
-        # position start_text center +50y from memory_game_text center
-        start_text_pos.center = tuple(map(sum, zip((0, 50), memory_game_pos.center)))
+        # position start_text center +50y from match_card_games_text center
+        start_text_pos.center = tuple(
+            map(sum, zip((0, 50), match_card_game_pos.center))
+        )
         quit_text_pos = quit_text.get_rect()
         quit_text_pos.center = tuple(map(sum, zip((0, 50), start_text_pos.center)))
 
-        screen.blit(memory_game_text, memory_game_pos.topleft)
+        screen.blit(match_card_game_text, match_card_game_pos.topleft)
 
         screen.fill(BUTTON_COLOR, start_text_pos)
         screen.blit(start_text, start_text_pos.topleft)
@@ -129,6 +190,7 @@ while True:
                 # finished showing all the cards
                 show_card = False
 
+        # logging.info(f"Round: {round_number}")
         round_number_text = font.render(f"Round: {round_number}", True, (10, 10, 10))
         round_number_text_pos = round_number_text.get_rect()
         option_text_pos = option_text.get_rect(left=WIDTH * 3 // 4)
@@ -198,7 +260,6 @@ while True:
 
     # logic code start here
     if game_state == GameState.MAIN_MENU:
-        events = pygame.event.get()
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 pos = pygame.mouse.get_pos()
@@ -213,7 +274,6 @@ while True:
     elif game_state == GameState.IN_PROGRESS:
         # if the UI is still showing the cards, dun react to clicking events
         if not show_card:
-            events = pygame.event.get()
             for event in events:
                 if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                     pos = pygame.mouse.get_pos()
@@ -238,6 +298,9 @@ while True:
                 if card1.name == card2.name:
                     card1.is_matched = True
                     card2.is_matched = True
+                    logging.info(f"{card1.name} is matched")
+                else:
+                    logging.info(f"{card1.name} and {card2.name} are not a match")
                 card1.is_selected = False
                 card2.is_selected = False
                 round_number += 1
@@ -250,7 +313,6 @@ while True:
                 game_state = GameState.END
 
     elif game_state == GameState.PAUSED:
-        events = pygame.event.get()
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 pos = pygame.mouse.get_pos()
@@ -271,7 +333,6 @@ while True:
                     showing_card_number = 0
 
     elif game_state == GameState.END:
-        events = pygame.event.get()
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 pos = pygame.mouse.get_pos()
