@@ -6,6 +6,7 @@ from os import listdir
 from pathlib import Path
 import pygame
 import config as c
+import threading
 from fruit import Fruit
 from button import Button
 from card import Card
@@ -27,6 +28,7 @@ class Game:
         self.objects = defaultdict(list)
         self.click_handlers = defaultdict(list)
         self.clock = pygame.time.Clock()
+        self.is_click_disabled = False
         self.fruits = []
         self.row = c.DEFAULT_ROW_SIZE
         self.column = c.DEFAULT_COLUMN_SIZE
@@ -82,8 +84,6 @@ class Game:
         by default, the grid size is 3x4, check for user inputs and whether the inputs are valid and update the grid size accordingly
         """
         arg_list = sys.argv
-        row = c.DEFAULT_ROW_SIZE
-        column = c.DEFAULT_COLUMN_SIZE
         input_valid = False
 
         # no arguments were passed in
@@ -306,17 +306,31 @@ class Game:
 
     def check_two_cards_opened(self):
         """check whether there are two opened cards and if they matched, update them"""
+
+        if self.is_click_disabled:
+            return
+
         opened_cards = [card for card in self.cards if card.is_selected]
 
         if len(opened_cards) == 2:
             card1, card2 = opened_cards
+
+            self.round_number += 1
             if card1 == card2:
                 card1.is_matched = True
                 card2.is_matched = True
+                card1.is_selected = False
+                card2.is_selected = False
+            else:
+                self.is_click_disabled = pygame.time.get_ticks()
 
-            card1.is_selected = False
-            card2.is_selected = False
-            self.round_number += 1
+                def update_disable_click_state():
+                    self.is_click_disabled = not self.is_click_disabled
+                    card1.is_selected = False
+                    card2.is_selected = False
+
+                timer = threading.Timer(c.DISABLE_TIME, update_disable_click_state)
+                timer.start()  # after
 
     def is_game_finished(self):
         """check are all cards matched"""
@@ -345,6 +359,9 @@ class Game:
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONUP:
+                if self.is_click_disabled:
+                    return
+
                 for handler in self.click_handlers[self.state]:
                     handler.on_click(event.pos)
 
