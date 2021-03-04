@@ -1,5 +1,5 @@
 <!-- omit in toc -->
-# *Match Card Game *
+# **Match Card Game**
 Match card game is a simple card matching game built with pygame. To maximize learning opportunities, the game is developed entirely by myself with occasional reference to pygame documentation and python specific syntax through google.
 
 <!-- omit in toc -->
@@ -24,7 +24,7 @@ Im trying to build more side project to improve my programming skills instead of
 This is my second side project! Do checkout my first side project [classic-snake-game](https://github.com/kahkeong/classic-snake-game) .
 
 ## **Features**
-- Randomized fruit images for each match (taken randomly from 20 images in the fruit folder)
+- Randomized fruit images for each match (taken randomly from 20 images in the fruits folder)
 - Customized board grid size through command prompt (default is 4x3)
 - Restart the game through option button whenever you like
 - End game statistic to show how many rounds you took to complete the match
@@ -35,7 +35,7 @@ This is my second side project! Do checkout my first side project [classic-snake
 #### Running the game with python
 - change directory to the downloaded project
 - ensure python is set in your windows path
-- type 'python main.py' in your command prompt to run it
+- type 'python main.py' at your command prompt to run it
  
 <!-- 
 #### Running the game without python
