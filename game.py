@@ -6,6 +6,7 @@ from os import listdir
 from pathlib import Path
 import pygame
 import config as c
+from fruit import Fruit
 from button import Button
 from card import Card
 from enum_game_state import GameState
@@ -16,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 class Game:
     def __init__(self):
-        self.cards = None
+        self.cards = []
         self.state = GameState.MAIN_MENU
         self.round_number = 0
         self.is_running_cards_animation = False
@@ -26,25 +27,22 @@ class Game:
         self.objects = defaultdict(list)
         self.click_handlers = defaultdict(list)
         self.clock = pygame.time.Clock()
-        self.fruits_image = {}
-        self.fruits_name = []
-        self.row = None
-        self.column = None
+        self.fruits = []
+        self.row = c.DEFAULT_ROW_SIZE
+        self.column = c.DEFAULT_COLUMN_SIZE
         self.surface = None
 
         pygame.font.init()
         self.font = pygame.font.Font(None, 36)
 
     def reset(self):
-        # by default reset to main menu
-        self.state = GameState.MAIN_MENU
         self.round_number = 0
         self.is_running_cards_animation = False
         self.previous_time = None
         self.showing_card_number = 0
         self.objects = defaultdict(list)
         self.click_handlers = defaultdict(list)
-        self.cards = None
+        self.cards = []
         self.setup()
 
     def is_game_end(self):
@@ -99,12 +97,12 @@ class Game:
                 if (
                     input_row < 2
                     or input_column < 3
-                    or input_row * input_column > len(self.fruits_name) * 2
+                    or input_row * input_column > len(self.fruits) * 2
                 ):
                     raise GridSizeError()
-                row = input_row
-                column = input_column
-                input_valid = True
+                self.row = input_row
+                self.column = input_column
+
             except ValueError:
                 logging.info("Invalid arguments, arguments should be type number")
                 logging.info("Fall back to default values")
@@ -113,7 +111,7 @@ class Game:
                 logging.info("Fall back to default values")
             except GridSizeError:
                 logging.info(
-                    f"Invalid arguments, arguments must fulfill following values, row>=2, column>= 3, row x column <= {len(self.fruits_name)*2}"
+                    f"Invalid arguments, arguments must fulfill following values, row>=2, column>= 3, row x column <= {len(self.fruits)*2}"
                 )
 
         if input_valid:
@@ -124,8 +122,6 @@ class Game:
             logging.info(
                 f"For best experience, board are initialized to default grid size of {row}x{column}"
             )
-        self.row = row
-        self.column = column
 
     def setup(self):
         width = c.CARD_SIZE * self.column + c.CARD_BORDER_GAP * (self.column + 1)
@@ -144,12 +140,11 @@ class Game:
         """
         create x number of cards based on the product of row and column and shuffle them
         """
-        selected_fruits = random.sample(self.fruits_name, self.row * self.column // 2)
+        selected_fruits = random.sample(self.fruits, self.row * self.column // 2)
 
         # each fruit should have 2 cards to represent it so we extend
         selected_fruits.extend(selected_fruits)
         random.shuffle(selected_fruits)
-        self.cards = []
 
         for x in range(self.row):
             for y in range(self.column):
@@ -162,10 +157,8 @@ class Game:
                     c.CARD_SIZE,
                     c.CARD_SIZE,
                 )
-                fruit_name = selected_fruits[x * self.column + y]
-                self.cards.append(
-                    Card(fruit_name, self.fruits_image[fruit_name], card_rect)
-                )
+                fruit = selected_fruits[x * self.column + y]
+                self.cards.append(Card(fruit, card_rect))
 
         self.objects[GameState.IN_PROGRESS].extend(self.cards)
         self.click_handlers[GameState.IN_PROGRESS].extend(self.cards)
@@ -216,7 +209,7 @@ class Game:
             self.state = GameState.PAUSED
 
         round_took_text = Text(
-            0, 0, lambda: f"Round Number: {self.round_number}", self.font, False
+            0, 0, lambda: f"Round: {self.round_number}", self.font, False
         )
         pause_button = Button(
             self.surface.get_size()[0] - c.BUTTON_WIDTH,
@@ -356,13 +349,13 @@ class Game:
     def get_fruits(self):
         """load images and store as hash map"""
         path = Path(__file__).parent / "fruits"
-        self.fruits_name = listdir(path)
-        self.fruits_image = {}
+        fruit_names = listdir(path)
 
-        for name in self.fruits_name:
+        for name in fruit_names:
             image = pygame.image.load(path / name)
             image = pygame.transform.scale(image, (c.CARD_SIZE, c.CARD_SIZE))
-            self.fruits_image[name] = image
+            fruit = Fruit(name, image)
+            self.fruits.append(fruit)
 
     def run(self):
         pygame.display.set_caption("Match card game")
