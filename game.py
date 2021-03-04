@@ -95,13 +95,15 @@ class Game:
                 input_column = int(arg_list[2])
 
                 if (
-                    input_row < 2
-                    or input_column < 3
+                    input_row <= 2
+                    or input_column <= 3
                     or input_row * input_column > len(self.fruits) * 2
+                    or input_row * input_column % 2 != 0
                 ):
                     raise GridSizeError()
                 self.row = input_row
                 self.column = input_column
+                input_valid = True
 
             except ValueError:
                 logging.info("Invalid arguments, arguments should be type number")
@@ -111,16 +113,16 @@ class Game:
                 logging.info("Fall back to default values")
             except GridSizeError:
                 logging.info(
-                    f"Invalid arguments, arguments must fulfill following values, row>=2, column>= 3, row x column <= {len(self.fruits)*2}"
+                    f"Invalid arguments, arguments must fulfill following values, row>=3, column>= 4, row x column <= {len(self.fruits)*2}, row*column is even"
                 )
 
         if input_valid:
             logging.info(
-                f"Board are initialized to requested grid size of {row}x{column}"
+                f"Board are initialized to requested grid size of {self.row}x{self.column}"
             )
         else:
             logging.info(
-                f"For best experience, board are initialized to default grid size of {row}x{column}"
+                f"For best experience, board are initialized to default grid size of {self.row}x{self.column}"
             )
 
     def setup(self):
