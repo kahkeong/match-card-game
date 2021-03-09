@@ -175,30 +175,28 @@ class Game:
             self.state = GameState.MAIN_MENU
 
         round_to_finish_text = Text(
-            100,
-            100,
+            0,
+            0,
             lambda: f"Took {self.round_number} rounds to finish !",
             self.font,
-            False,
+            True,
         )
 
         restart_button = Button(
-            100,
-            150,
-            c.BUTTON_WIDTH,
-            c.BUTTON_HEIGHT,
+            0,
+            50,
             lambda: "Restart",
             self.font,
             on_restart,
+            centre=True,
         )
         main_menu_button = Button(
+            0,
             100,
-            200,
-            c.BUTTON_WIDTH,
-            c.BUTTON_HEIGHT,
             lambda: "Main Menu",
             self.font,
             on_main_menu,
+            centre=True,
         )
 
         self.click_handlers[GameState.END].extend([restart_button, main_menu_button])
@@ -214,10 +212,8 @@ class Game:
             0, 0, lambda: f"Round: {self.round_number}", self.font, False
         )
         pause_button = Button(
-            self.surface.get_size()[0] - c.BUTTON_WIDTH,
+            self.surface.get_size()[0] - 100,
             0,
-            c.BUTTON_WIDTH,
-            c.BUTTON_HEIGHT,
             lambda: "Pause",
             self.font,
             on_pause,
@@ -235,27 +231,34 @@ class Game:
         def on_quit():
             self.exit = True
 
+        title_text = Text(
+            0,
+            0,
+            lambda: "Match Card Game",
+            self.font,
+            centre=True,
+        )
         start_button = Button(
-            100,
-            100,
-            c.BUTTON_WIDTH,
-            c.BUTTON_HEIGHT,
+            0,
+            50,
             lambda: "Start",
             self.font,
             on_start,
+            centre=True,
         )
         quit_button = Button(
+            0,
             100,
-            150,
-            c.BUTTON_WIDTH,
-            c.BUTTON_HEIGHT,
             lambda: "Quit",
             self.font,
             on_quit,
+            centre=True,
         )
 
         self.click_handlers[GameState.MAIN_MENU].extend([start_button, quit_button])
-        self.objects[GameState.MAIN_MENU].extend([start_button, quit_button])
+        self.objects[GameState.MAIN_MENU].extend(
+            [title_text, start_button, quit_button]
+        )
 
     def create_pause_menu(self):
         def on_resume():
@@ -270,31 +273,28 @@ class Game:
             self.state = GameState.MAIN_MENU
 
         resume_button = Button(
-            100,
-            100,
-            c.BUTTON_WIDTH,
-            c.BUTTON_HEIGHT,
+            0,
+            0,
             lambda: "Resume",
             self.font,
             on_resume,
+            centre=True,
         )
         restart_button = Button(
-            100,
-            150,
-            c.BUTTON_WIDTH,
-            c.BUTTON_HEIGHT,
+            0,
+            50,
             lambda: "Restart",
             self.font,
             on_restart,
+            centre=True,
         )
         main_menu_button = Button(
+            0,
             100,
-            200,
-            c.BUTTON_WIDTH,
-            c.BUTTON_HEIGHT,
             lambda: "Main Menu",
             self.font,
             on_main_menu,
+            centre=True,
         )
 
         self.click_handlers[GameState.PAUSED].extend(
@@ -363,7 +363,7 @@ class Game:
                     return
 
                 for handler in self.click_handlers[self.state]:
-                    handler.on_click(event.pos)
+                    handler.on_click(self.surface, event.pos)
 
     def get_fruits(self):
         """load images and store as hash map"""

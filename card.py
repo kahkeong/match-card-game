@@ -23,7 +23,7 @@ class Card:
         else:
             surface.fill(c.BLUE_COLOR, self.rect)
 
-    def on_click(self, pos):
+    def on_click(self, _surface, pos):
         if self.is_matched:
             return
 
