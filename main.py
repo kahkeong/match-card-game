@@ -2,8 +2,10 @@ import logging
 import random
 import sys
 from collections import defaultdict
+import sys
+import os
 from os import listdir
-from pathlib import Path
+from pathlib import Path, PurePath
 import pygame
 import config as c
 import threading
@@ -367,14 +369,25 @@ class Game:
 
     def get_fruits(self):
         """load images and store as hash map"""
-        path = Path(__file__).parent / "fruits"
+        path = self.resource_path("fruits")
         fruit_names = listdir(path)
 
         for name in fruit_names:
-            image = pygame.image.load(path / name)
+            path = self.resource_path("fruits/" + name)
+            image = pygame.image.load(path)
             image = pygame.transform.scale(image, (c.CARD_SIZE, c.CARD_SIZE))
             fruit = Fruit(name, image)
             self.fruits.append(fruit)
+
+    def resource_path(self, relative_path):
+        """ Get absolute path to resource"""
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            base_path = Path(sys._MEIPASS)
+        except Exception:
+            base_path = Path(__file__).resolve().parent
+
+        return base_path.joinpath(base_path, relative_path)
 
     def run(self):
         pygame.display.set_caption("Match card game")
